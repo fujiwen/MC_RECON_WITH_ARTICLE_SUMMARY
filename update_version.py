@@ -81,7 +81,7 @@ try:
         # If we get here, we found a version
         print(f"Using version: {version}")
         
- except Exception as e:
+except Exception as e:
     print(f"Error reading MC_Recon_UI.py: {e}")
     sys.exit(1)
 
@@ -102,6 +102,7 @@ print(f"Incrementing patch version: {version} -> {new_version}")
 print("Updating version in MC_Recon_UI.py...")
 try:
     # Try to replace using the same pattern that matched
+    updated = False
     for pattern in patterns:
         version_match = re.search(pattern, content)
         if version_match:
@@ -115,13 +116,28 @@ try:
                 with open('MC_Recon_UI.py', 'w', encoding='utf-8') as f:
                     f.write(new_content)
                 print(f"Updated version in MC_Recon_UI.py to {new_version}")
+                updated = True
                 break
-    else:
+    
+    if not updated:
         # If no pattern matched or replacement failed, try a more generic approach
+        print("Using generic replacement approach")
         new_content = re.sub(r"(['\"])[\d]+\.[\d]+\.[\d]+(['\"])", f"\1{new_version}\2", content, count=1)
-        with open('MC_Recon_UI.py', 'w', encoding='utf-8') as f:
-            f.write(new_content)
-        print(f"Updated version in MC_Recon_UI.py to {new_version} using generic replacement")
+        
+        # Check if replacement was successful
+        if new_content != content:
+            with open('MC_Recon_UI.py', 'w', encoding='utf-8') as f:
+                f.write(new_content)
+            print(f"Updated version in MC_Recon_UI.py to {new_version} using generic replacement")
+        else:
+            print("Warning: Could not update version in MC_Recon_UI.py")
+            # Try to add version if it doesn't exist
+            if "VERSION = " not in content:
+                # Add version definition at the beginning of the file
+                new_content = f"VERSION = '{new_version}'\n\n" + content
+                with open('MC_Recon_UI.py', 'w', encoding='utf-8') as f:
+                    f.write(new_content)
+                print(f"Added VERSION = '{new_version}' to the beginning of MC_Recon_UI.py")
         
 except Exception as e:
     print(f"Error updating MC_Recon_UI.py: {e}")
