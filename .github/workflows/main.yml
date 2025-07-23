@@ -24,16 +24,16 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         
-    - name: Get App Version
+    - name: Build with PyInstaller
+      run: |
+        python build_with_version.py
+        
+    - name: Get Updated App Version
       id: get_version
       run: |
         $version = Select-String -Path MC_Recon_UI.py -Pattern "VERSION = '([\d\.]+)'" | ForEach-Object { $_.Matches.Groups[1].Value }
         echo "APP_VERSION=$version" >> $env:GITHUB_ENV
         echo "Version detected: $version"
-        
-    - name: Build with PyInstaller
-      run: |
-        python build_with_version.py
         
     - name: Upload artifact
       uses: actions/upload-artifact@v4
