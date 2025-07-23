@@ -30,12 +30,12 @@ VSVersionInfo(
       StringTable(
         u'080404b0',
         [StringStruct(u'CompanyName', u'MC'),
-        StringStruct(u'FileDescription', u'MC对账明细工具'),
+        StringStruct(u'FileDescription', u'MC Reconciliation Tool'),
         StringStruct(u'FileVersion', u'1.1.16'),
-        StringStruct(u'InternalName', u'MC对账明细工具'),
+        StringStruct(u'InternalName', u'MC_Recon_Tool'),
         StringStruct(u'LegalCopyright', u'Copyright (C) 2024'),
-        StringStruct(u'OriginalFilename', u'MC对账明细工具.exe'),
-        StringStruct(u'ProductName', u'MC对账明细工具'),
+        StringStruct(u'OriginalFilename', u'MC_Recon_Tool.exe'),
+        StringStruct(u'ProductName', u'MC Reconciliation Tool'),
         StringStruct(u'ProductVersion', u'1.1.16'),
         StringStruct(u'Developer', u'Cayman Fu')])
       ]), 

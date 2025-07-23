@@ -1,44 +1,48 @@
-# MC对账明细工具
+# MC Reconciliation Tool
 
-## 项目说明
+## Repository Information
 
-这是一个用于处理收货记录和生成供应商对账明细的工具。该工具使用Python开发，并使用PyQt5构建图形用户界面。
+GitHub Repository: https://github.com/fujiwen/MC_RECON_WITH_ARTICLE_SUMMARY
 
-## 运行环境要求
+## Project Description
 
-- Python 3.10或更高版本
-- 依赖包：pandas, numpy, openpyxl, PyQt5
+This is a tool for processing receipt records and generating supplier reconciliation details. The tool is developed using Python and uses PyQt5 to build the graphical user interface.
 
-## 不使用虚拟环境运行
+## Requirements
 
-### 方法一：使用批处理文件
+- Python 3.10 or higher
+- Dependencies: pandas, numpy, openpyxl, PyQt5
 
-1. 双击运行`run_without_venv.bat`文件
-2. 批处理文件会自动检查Python环境和依赖项，并启动程序
+## Running Without Virtual Environment
 
-### 方法二：手动运行
+### Method 1: Using Batch File
 
-1. 确保已安装Python 3.10或更高版本
-2. 安装依赖项：
+1. Double-click `run_without_venv.bat` file
+2. The batch file will automatically check Python environment and dependencies, then start the program
+
+### Method 2: Manual Run
+
+1. Ensure Python 3.10 or higher is installed
+2. Install dependencies:
    ```
    pip install -r requirements.txt
    ```
-3. 运行程序：
+3. Run the program:
    ```
    python MC_Recon_UI.py
    ```
 
-## 构建可执行文件
+## Building Executable
 
-如果需要构建为独立的可执行文件，可以使用以下命令：
+To build a standalone executable, use the following command:
 
 ```
 pip install pyinstaller
-pyinstaller --noconfirm --onefile --windowed --icon=favicon.ico --name="MC对账明细工具" MC_Recon_UI.py
+pyinstaller --noconfirm --onefile --windowed --icon=favicon.ico --name="MC_Recon_Tool" MC_Recon_UI.py
 ```
 
-构建完成后，可执行文件将位于`dist`目录中。
+After building, the executable will be located in the `dist` directory.
 
-## 自动构建
+## Automatic Build
 
-本项目已配置GitHub Actions工作流，当代码推送到main分支时，会自动构建Windows可执行文件。构建结果可在GitHub Actions的构建工件中下载。
+This project has configured GitHub Actions workflow. When code is pushed to the main branch, it will automatically build Windows executable. The build results can be downloaded from GitHub Actions artifacts.

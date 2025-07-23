@@ -1,174 +1,105 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
 import os
+import re
+import subprocess
 import sys
-import shutil
 import zipfile
 import platform
-import subprocess
-import re
-from pathlib import Path
+from datetime import datetime
 
-# Force UTF-8 encoding in Windows environment
-if platform.system() == 'Windows':
-    # Set console code page to UTF-8
-    os.system('chcp 65001 > nul')
-    # Force stdout and stderr to use UTF-8
-    if hasattr(sys.stdout, 'reconfigure'):
-        sys.stdout.reconfigure(encoding='utf-8')
-    if hasattr(sys.stderr, 'reconfigure'):
-        sys.stderr.reconfigure(encoding='utf-8')
+# Set console encoding to UTF-8
+os.environ["PYTHONIOENCODING"] = "utf-8"
 
-# Print system information for debugging
-print(f"System: {platform.system()}")
-print(f"Python version: {platform.python_version()}")
-print(f"Default encoding: {sys.getdefaultencoding()}")
+# Set console code page to UTF-8 in Windows environment
+if platform.system() == "Windows":
+    try:
+        # 设置控制台代码页为UTF-8 (65001)
+        os.system("chcp 65001 > nul")
+        # 强制使用UTF-8输出
+        if hasattr(sys.stdout, 'reconfigure'):
+            sys.stdout.reconfigure(encoding='utf-8')
+            sys.stderr.reconfigure(encoding='utf-8')
+    except Exception as e:
+        print(f"Warning: Failed to set console encoding: {e}")
 
-# Update version
-print("\n" + "=" * 50)
-print("Step 1: Updating version number")
-print("=" * 50)
+print(f"System: {platform.system()}, Python: {platform.python_version()}, Encoding: {sys.getdefaultencoding()}")
 
-try:
-    subprocess.run([sys.executable, 'update_version.py'], check=True)
-    print("Version updated successfully!")
-except subprocess.CalledProcessError as e:
-    print(f"Error updating version: {e}")
+
+# Print header
+print("="*50)
+print("      MC Reconciliation Tool - Auto Packaging Script")
+print("="*50)
+
+# Update version number
+print("[1/5] Updating version number...")
+result = subprocess.run([sys.executable, "update_version.py"], capture_output=True, text=True, encoding="utf-8")
+print(result.stdout)
+
+# Get current version number
+with open("MC_Recon_UI.py", "r", encoding="utf-8") as f:
+    content = f.read()
+    version_match = re.search(r"VERSION = '([\d\.]+)'", content)
+    current_version = version_match.group(1) if version_match else "unknown"
+
+# Compile resource file
+print("[2/5] Compiling resource file...")
+resource_result = subprocess.run(["pyrcc5", "-o", "resources.py", "resources.qrc"], capture_output=True, text=True, encoding="utf-8")
+if resource_result.returncode != 0:
+    print("Resource file compilation failed!")
+    print("Error message:")
+    print(resource_result.stderr)
     sys.exit(1)
 
-# Get current version
-try:
-    with open('MC_Recon_UI.py', 'r', encoding='utf-8') as f:
-        content = f.read()
-        print(f"File size: {len(content)} bytes")
-        
-        # Try multiple patterns to find version
-        patterns = [
-            r"VERSION\s*=\s*'([\d\.]+)'\s*",  # VERSION = '1.1.16'
-            r"VERSION\s*=\s*'([\d\.]+)'",      # VERSION = '1.1.16' (no trailing whitespace)
-            r"VERSION\s*=\s*\"([\d\.]+)\"\s*", # VERSION = "1.1.16"
-            r"VERSION\s*=\s*\"([\d\.]+)\"",    # VERSION = "1.1.16" (no trailing whitespace)
-            r"self\.version\s*=\s*'([\d\.]+)'\s*", # self.version = '1.1.16'
-            r"self\.version\s*=\s*\"([\d\.]+)\"\s*", # self.version = "1.1.16"
-            r"__version__\s*=\s*'([\d\.]+)'\s*", # __version__ = '1.1.16'
-            r"__version__\s*=\s*\"([\d\.]+)\"\s*" # __version__ = "1.1.16"
-        ]
-        
-        current_version = None
-        for i, pattern in enumerate(patterns):
-            version_match = re.search(pattern, content)
-            if version_match:
-                current_version = version_match.group(1)
-                print(f"Found version: {current_version} using pattern {i+1}")
-                break
-        
-        if not current_version:
-            # Try to find any version-like pattern
-            backup_pattern = r"['\"]([\d]+\.[\d]+\.[\d]+)['\"]"  # '1.1.16' or "1.1.16"
-            version_match = re.search(backup_pattern, content)
-            if version_match:
-                current_version = version_match.group(1)
-                print(f"Found version with backup pattern: {current_version}")
-            else:
-                # Print file content sample for debugging
-                print("Error: Could not find version in MC_Recon_UI.py")
-                print("File content sample:")
-                lines = content.split('\n')
-                
-                # Try to find lines with version-like strings
-                version_lines = []
-                for i, line in enumerate(lines):
-                    if re.search(r"['\"][\d]+\.[\d]+\.[\d]+['\"]|version|VERSION", line, re.IGNORECASE):
-                        version_lines.append((i, line))
-                
-                if version_lines:
-                    print("Found lines that might contain version information:")
-                    for i, line in version_lines[:10]:  # Show at most 10 lines
-                        print(f"Line {i+1}: {line}")
-                else:
-                    # Show a sample of lines if no version-like lines found
-                    for i in range(max(0, 580), min(585, len(lines))):
-                        print(f"Line {i+1}: {lines[i]}")
-                
-                sys.exit(1)
-                
-        # If we get here, we found a version
-        print(f"Using version: {current_version}")
-        
-except Exception as e:
-    print(f"Error reading MC_Recon_UI.py: {e}")
-    sys.exit(1)
+# Package application
+print(f"[3/5] Packaging application v{current_version}...")
+result = subprocess.run(["pyinstaller", "mc_recon_tool.spec", "--clean"], capture_output=True, text=True, encoding="utf-8")
 
-# Compile resources
-print("\n" + "=" * 50)
-print("Step 2: Compiling resource files")
-print("=" * 50)
-
-try:
-    subprocess.run(['pyrcc5', 'resources.qrc', '-o', 'resources.py'], check=True)
-    print("Resource files compiled successfully!")
-except subprocess.CalledProcessError as e:
-    print(f"Error compiling resources: {e}")
-    sys.exit(1)
-
-# Build with PyInstaller
-print("\n" + "=" * 50)
-print("Step 3: Building with PyInstaller")
-print("=" * 50)
-
-try:
-    subprocess.run(['pyinstaller', f'MC对账明细工具.spec'], check=True)
-    print("PyInstaller build completed successfully!")
-except subprocess.CalledProcessError as e:
-    print(f"Error building with PyInstaller: {e}")
-    sys.exit(1)
-
-# Create zip file
-print("\n" + "=" * 50)
-print("Step 4: Creating ZIP package")
-print("=" * 50)
-
-exe_name = f"MC对账明细工具_v{current_version}.exe"
-exe_path = os.path.join('dist', exe_name)
-
-if not os.path.exists(exe_path):
-    print(f"Error: Executable file not found at {exe_path}")
-    # Try to find the actual file
-    dist_files = os.listdir('dist')
-    print(f"Files in dist directory: {dist_files}")
+# Check packaging result
+exe_path = os.path.join("dist", f"MC_Recon_Tool_v{current_version}.exe")
+if os.path.exists(exe_path):
+    print("[4/5] Packaging completed!")
     
-    # Try to find any .exe file
-    exe_files = [f for f in dist_files if f.endswith('.exe')]
-    if exe_files:
-        print(f"Found executable files: {exe_files}")
-        exe_path = os.path.join('dist', exe_files[0])
-        print(f"Using: {exe_path}")
-    else:
-        sys.exit(1)
-
-zip_name = f"MC对账明细工具_v{current_version}.zip"
-zip_path = os.path.join('dist', zip_name)
-
-try:
-    with zipfile.ZipFile(zip_path, 'w') as zipf:
-        # Add executable
+    # Get file information
+    file_time = datetime.fromtimestamp(os.path.getmtime(exe_path))
+    file_size = os.path.getsize(exe_path) / (1024 * 1024)  # Convert to MB
+    
+    print("\nApplication information:")
+    print(f"  File name: {exe_path}")
+    print(f"  File size: {file_size:.2f} MB")
+    print(f"  Creation time: {file_time.strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"  Version: {current_version}")
+    
+    # Create zip package
+    print("[5/5] Creating zip package...")
+    zip_filename = f"MC_Recon_Tool_v{current_version}.zip"
+    zip_path = os.path.join("dist", zip_filename)
+    
+    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        # Add newly packaged exe file
         zipf.write(exe_path, os.path.basename(exe_path))
-        print(f"Added {os.path.basename(exe_path)} to ZIP")
         
-        # Add config.ini if it exists
-        if os.path.exists('config.ini'):
-            zipf.write('config.ini', 'config.ini')
-            print("Added config.ini to ZIP")
+        # Add configuration file
+        config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.ini')
+        if os.path.exists(config_path):
+            zipf.write(config_path, 'config.ini')
+            print(f"Added configuration file: config.ini")
         else:
-            print("Warning: config.ini not found, skipping")
-            
-    print(f"ZIP package created successfully: {zip_path}")
-    print(f"ZIP file size: {os.path.getsize(zip_path) / (1024*1024):.2f} MB")
-except Exception as e:
-    print(f"Error creating ZIP package: {e}")
-    sys.exit(1)
+            print(f"Warning: Configuration file does not exist: {config_path}")
+    
+    # Get zip package information
+    zip_size = os.path.getsize(zip_path) / (1024 * 1024)  # Convert to MB
+    
+    print("\nZip package information:")
+    print(f"  File name: {zip_filename}")
+    print(f"  File size: {zip_size:.2f} MB")
+    
+    # Show output directory
+    print(f"\nPackage files located at: {os.path.abspath('dist')}")
+    print(f"Build successful: {exe_path}")
+else:
+    print("[3/5] Packaging failed!")
+    print("Error message:")
+    print(result.stderr)
 
-print("\n" + "=" * 50)
-print("Build process completed successfully!")
-print("=" * 50)
+# In GitHub Actions environment, don't wait for input
+if not os.environ.get('GITHUB_ACTIONS'):
+    input("\nPress Enter to exit...")
