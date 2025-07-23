@@ -1,0 +1,39 @@
+name: Build Windows Application
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Build with PyInstaller
+      run: |
+        python build_with_version.py
+        
+    - name: Get App Version
+      run: |
+        $version = Select-String -Path MC_Recon_UI.py -Pattern "VERSION = '([\d\.]+)'" | ForEach-Object { $_.Matches.Groups[1].Value }
+        echo "APP_VERSION=$version" >> $env:GITHUB_ENV
+        
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: MC_Recon_Tool_v${{ env.APP_VERSION }}
+        path: dist/MC_Recon_Tool_*.exe

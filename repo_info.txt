@@ -1,0 +1,9 @@
+# GitHub Repository Information
+
+Repository URL: https://github.com/fujiwen/MC_RECON_WITH_ARTICLE_SUMMARY
+Owner: fujiwen
+Repository Name: MC_RECON_WITH_ARTICLE_SUMMARY
+
+# Notes
+- This file is used to store the GitHub repository information for easy reference
+- Please update this file if the repository information changes
