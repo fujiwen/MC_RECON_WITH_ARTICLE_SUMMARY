@@ -7,6 +7,7 @@ import shutil
 import zipfile
 import platform
 import subprocess
+import re
 from pathlib import Path
 
 # Force UTF-8 encoding in Windows environment
@@ -37,16 +38,28 @@ except subprocess.CalledProcessError as e:
     sys.exit(1)
 
 # Get current version
-with open('MC_Recon_UI.py', 'r', encoding='utf-8') as f:
-    content = f.read()
-    import re
-    version_match = re.search(r"VERSION = '([\d\.]+)'\s*", content)
-    if version_match:
-        current_version = version_match.group(1)
-        print(f"Current version: {current_version}")
-    else:
-        print("Error: Could not find version in MC_Recon_UI.py")
-        sys.exit(1)
+try:
+    with open('MC_Recon_UI.py', 'r', encoding='utf-8') as f:
+        content = f.read()
+        # Try multiple regex patterns to find the version
+        version_match = re.search(r"VERSION\s*=\s*'([\d\.]+)'\s*", content)
+        if not version_match:
+            version_match = re.search(r"VERSION\s*=\s*'([\d\.]+)'", content)
+        
+        if version_match:
+            current_version = version_match.group(1)
+            print(f"Current version: {current_version}")
+        else:
+            print("Error: Could not find version in MC_Recon_UI.py")
+            # Print a small portion of the file for debugging
+            print("File content sample:")
+            lines = content.split('\n')
+            for i in range(max(0, 580), min(585, len(lines))):
+                print(f"Line {i+1}: {lines[i]}")
+            sys.exit(1)
+except Exception as e:
+    print(f"Error reading MC_Recon_UI.py: {e}")
+    sys.exit(1)
 
 # Compile resources
 print("\n" + "=" * 50)
