@@ -1,4 +1,4 @@
-name: Build MC Recon Tool
+name: Build Windows Application
 
 on:
   push:
@@ -10,34 +10,33 @@ on:
 jobs:
   build:
     runs-on: windows-latest
-
+    
     steps:
     - uses: actions/checkout@v4
-
-    - name: Set up Python 3.11
+    
+    - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
-
+        
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-
-    - name: Get app version
+        
+    - name: Get App Version
       id: get_version
       run: |
-        $version = Select-String -Path MC_Recon_UI.py -Pattern "VERSION = '(.*)'"
-        $version = $version.Matches.Groups[1].Value
+        $version = Select-String -Path MC_Recon_UI.py -Pattern "VERSION = '([\d\.]+)'" | ForEach-Object { $_.Matches.Groups[1].Value }
         echo "APP_VERSION=$version" >> $env:GITHUB_ENV
-        echo "App version: $version"
-
+        echo "Version detected: $version"
+        
     - name: Build with PyInstaller
       run: |
         python build_with_version.py
-
+        
     - name: Upload artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: recon_tools_v${{ env.APP_VERSION }}
+        name: MC对账明细工具_v${{ env.APP_VERSION }}
         path: dist/MC对账明细工具_v${{ env.APP_VERSION }}.zip
