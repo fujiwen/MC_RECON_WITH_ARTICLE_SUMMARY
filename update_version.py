@@ -26,13 +26,25 @@ print("Reading version from MC_Recon_UI.py...")
 try:
     with open('MC_Recon_UI.py', 'r', encoding='utf-8') as f:
         content = f.read()
-        version_match = re.search(r"VERSION = '([\d\.]+)'\s*", content)
+        # Modified regex pattern to better match the actual format in the file
+        version_match = re.search(r"VERSION\s*=\s*'([\d\.]+)'\s*", content)
         if version_match:
             version = version_match.group(1)
             print(f"Found version: {version}")
         else:
-            print("Error: Could not find version in MC_Recon_UI.py")
-            sys.exit(1)
+            # Try alternative pattern without whitespace requirement after the version
+            version_match = re.search(r"VERSION\s*=\s*'([\d\.]+)'", content)
+            if version_match:
+                version = version_match.group(1)
+                print(f"Found version with alternative pattern: {version}")
+            else:
+                print("Error: Could not find version in MC_Recon_UI.py")
+                # Print a small portion of the file for debugging
+                print("File content sample:")
+                lines = content.split('\n')
+                for i in range(max(0, 580), min(585, len(lines))):
+                    print(f"Line {i+1}: {lines[i]}")
+                sys.exit(1)
 except Exception as e:
     print(f"Error reading MC_Recon_UI.py: {e}")
     sys.exit(1)
@@ -53,7 +65,7 @@ print(f"Incrementing patch version: {version} -> {new_version}")
 # Update version in MC_Recon_UI.py
 print("Updating version in MC_Recon_UI.py...")
 try:
-    new_content = re.sub(r"VERSION = '[\d\.]+'\s*", f"VERSION = '{new_version}'\n", content)
+    new_content = re.sub(r"VERSION\s*=\s*'[\d\.]+'\s*", f"VERSION = '{new_version}'\n", content)
     with open('MC_Recon_UI.py', 'w', encoding='utf-8') as f:
         f.write(new_content)
     print(f"Updated version in MC_Recon_UI.py to {new_version}")
