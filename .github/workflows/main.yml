@@ -38,5 +38,5 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: MC对账明细工具_v${{ env.APP_VERSION }}
-        path: dist/MC对账明细工具_v${{ env.APP_VERSION }}.zip
+        name: MC_Recon_Tool_v${{ env.APP_VERSION }}
+        path: dist/MC_Recon_Tool_v${{ env.APP_VERSION }}.zip
