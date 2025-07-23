@@ -1,77 +1,93 @@
-import re
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import os
 import sys
-import locale
-from datetime import datetime
+import re
+import platform
 
-# 设置控制台编码为UTF-8
-os.environ["PYTHONIOENCODING"] = "utf-8"
-
-# 在Windows环境中设置控制台代码页为UTF-8
-if sys.platform == "win32":
-    try:
-        # 设置控制台代码页为65001 (UTF-8)
-        import subprocess
-        subprocess.run(["chcp", "65001"], shell=True, check=True)
-        # 强制使用UTF-8输出
+# Force UTF-8 encoding in Windows environment
+if platform.system() == 'Windows':
+    # Set console code page to UTF-8
+    os.system('chcp 65001 > nul')
+    # Force stdout and stderr to use UTF-8
+    if hasattr(sys.stdout, 'reconfigure'):
         sys.stdout.reconfigure(encoding='utf-8')
+    if hasattr(sys.stderr, 'reconfigure'):
         sys.stderr.reconfigure(encoding='utf-8')
-    except Exception as e:
-        print(f"Warning: Failed to set console encoding: {e}")
 
-def update_version():
-    # 读取当前版本号
-    version_pattern = re.compile(r"VERSION\s*=\s*['\"]([0-9]+)\.([0-9]+)\.([0-9]+)['\"]")
-    
-    mc_recon_path = 'MC_Recon_UI.py'
-    version_file_path = 'file_version_info.txt'
-    
-    # 读取MC_Recon_UI.py文件内容
-    with open(mc_recon_path, 'r', encoding='utf-8') as f:
+# Print system information for debugging
+print(f"System: {platform.system()}")
+print(f"Python version: {platform.python_version()}")
+print(f"Default encoding: {sys.getdefaultencoding()}")
+
+# Read version from MC_Recon_UI.py
+print("Reading version from MC_Recon_UI.py...")
+try:
+    with open('MC_Recon_UI.py', 'r', encoding='utf-8') as f:
+        content = f.read()
+        version_match = re.search(r"VERSION = '([\d\.]+)'\s*", content)
+        if version_match:
+            version = version_match.group(1)
+            print(f"Found version: {version}")
+        else:
+            print("Error: Could not find version in MC_Recon_UI.py")
+            sys.exit(1)
+except Exception as e:
+    print(f"Error reading MC_Recon_UI.py: {e}")
+    sys.exit(1)
+
+# Parse version
+version_parts = version.split('.')
+if len(version_parts) != 3:
+    print(f"Error: Invalid version format: {version}")
+    sys.exit(1)
+
+major, minor, patch = map(int, version_parts)
+
+# Increment patch version
+patch += 1
+new_version = f"{major}.{minor}.{patch}"
+print(f"Incrementing patch version: {version} -> {new_version}")
+
+# Update version in MC_Recon_UI.py
+print("Updating version in MC_Recon_UI.py...")
+try:
+    new_content = re.sub(r"VERSION = '[\d\.]+'\s*", f"VERSION = '{new_version}'\n", content)
+    with open('MC_Recon_UI.py', 'w', encoding='utf-8') as f:
+        f.write(new_content)
+    print(f"Updated version in MC_Recon_UI.py to {new_version}")
+except Exception as e:
+    print(f"Error updating MC_Recon_UI.py: {e}")
+    sys.exit(1)
+
+# Update version in file_version_info.txt
+print("Updating version in file_version_info.txt...")
+try:
+    with open('file_version_info.txt', 'r', encoding='utf-8') as f:
         content = f.read()
     
-    # 查找版本号
-    match = version_pattern.search(content)
-    if not match:
-        print("Version not found in MC_Recon_UI.py")
-        return False
+    # Update filevers and prodvers
+    content = re.sub(r"filevers=\([\d, ]+\)", f"filevers=({major}, {minor}, {patch}, 0)", content)
+    content = re.sub(r"prodvers=\([\d, ]+\)", f"prodvers=({major}, {minor}, {patch}, 0)", content)
     
-    # 解析版本号
-    major, minor, patch = map(int, match.groups())
+    # Update FileVersion and ProductVersion
+    content = re.sub(
+        r"StringStruct\('FileVersion', '[\d\.]+'\)",
+        f"StringStruct('FileVersion', '{new_version}')",
+        content
+    )
+    content = re.sub(
+        r"StringStruct\('ProductVersion', '[\d\.]+'\)",
+        f"StringStruct('ProductVersion', '{new_version}')",
+        content
+    )
     
-    # 增加修订版本号
-    patch += 1
-    new_version = f"{major}.{minor}.{patch}"
-    
-    # 更新MC_Recon_UI.py中的版本号
-    new_content = version_pattern.sub(f"VERSION = '{major}.{minor}.{patch}'", content)
-    with open(mc_recon_path, 'w', encoding='utf-8') as f:
-        f.write(new_content)
-    
-    # 更新file_version_info.txt中的版本号
-    if os.path.exists(version_file_path):
-        with open(version_file_path, 'r', encoding='utf-8') as f:
-            version_content = f.read()
-        
-        # 更新filevers和prodvers
-        filevers_pattern = re.compile(r"filevers=\(([0-9]+),\s*([0-9]+),\s*([0-9]+),\s*([0-9]+)\)")
-        version_content = filevers_pattern.sub(f"filevers=({major}, {minor}, {patch}, 0)", version_content)
-        
-        prodvers_pattern = re.compile(r"prodvers=\(([0-9]+),\s*([0-9]+),\s*([0-9]+),\s*([0-9]+)\)")
-        version_content = prodvers_pattern.sub(f"prodvers=({major}, {minor}, {patch}, 0)", version_content)
-        
-        # 更新FileVersion和ProductVersion
-        file_version_pattern = re.compile(r"StringStruct\(u'FileVersion',\s*u'[0-9\.]+'\)")
-        version_content = file_version_pattern.sub(f"StringStruct(u'FileVersion', u'{new_version}')", version_content)
-        
-        product_version_pattern = re.compile(r"StringStruct\(u'ProductVersion',\s*u'[0-9\.]+'\)")
-        version_content = product_version_pattern.sub(f"StringStruct(u'ProductVersion', u'{new_version}')", version_content)
-        
-        with open(version_file_path, 'w', encoding='utf-8') as f:
-            f.write(version_content)
-    
-    print(f"Version updated: {major}.{minor}.{patch}")
-    return True
+    with open('file_version_info.txt', 'w', encoding='utf-8') as f:
+        f.write(content)
+    print(f"Updated version in file_version_info.txt to {new_version}")
+except Exception as e:
+    print(f"Error updating file_version_info.txt: {e}")
+    sys.exit(1)
 
-if __name__ == "__main__":
-    update_version()
+print("Version update completed successfully!")
