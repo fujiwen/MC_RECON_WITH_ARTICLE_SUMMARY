@@ -1,7 +1,23 @@
 import re
 import os
 import sys
+import locale
 from datetime import datetime
+
+# 设置控制台编码为UTF-8
+os.environ["PYTHONIOENCODING"] = "utf-8"
+
+# 在Windows环境中设置控制台代码页为UTF-8
+if sys.platform == "win32":
+    try:
+        # 设置控制台代码页为65001 (UTF-8)
+        import subprocess
+        subprocess.run(["chcp", "65001"], shell=True, check=True)
+        # 强制使用UTF-8输出
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+    except Exception as e:
+        print(f"Warning: Failed to set console encoding: {e}")
 
 def update_version():
     # 读取当前版本号
@@ -17,7 +33,7 @@ def update_version():
     # 查找版本号
     match = version_pattern.search(content)
     if not match:
-        print("无法在MC_Recon_UI.py中找到版本号")
+        print("Version not found in MC_Recon_UI.py")
         return False
     
     # 解析版本号
@@ -45,16 +61,16 @@ def update_version():
         version_content = prodvers_pattern.sub(f"prodvers=({major}, {minor}, {patch}, 0)", version_content)
         
         # 更新FileVersion和ProductVersion
-        file_version_pattern = re.compile(r"StringStruct\(u'FileVersion',\s*u'[0-9\.]+'\")")
+        file_version_pattern = re.compile(r"StringStruct\(u'FileVersion',\s*u'[0-9\.]+'\)")
         version_content = file_version_pattern.sub(f"StringStruct(u'FileVersion', u'{new_version}')", version_content)
         
-        product_version_pattern = re.compile(r"StringStruct\(u'ProductVersion',\s*u'[0-9\.]+'\")")
+        product_version_pattern = re.compile(r"StringStruct\(u'ProductVersion',\s*u'[0-9\.]+'\)")
         version_content = product_version_pattern.sub(f"StringStruct(u'ProductVersion', u'{new_version}')", version_content)
         
         with open(version_file_path, 'w', encoding='utf-8') as f:
             f.write(version_content)
     
-    print(f"版本号已更新: {major}.{minor}.{patch}")
+    print(f"Version updated: {major}.{minor}.{patch}")
     return True
 
 if __name__ == "__main__":
