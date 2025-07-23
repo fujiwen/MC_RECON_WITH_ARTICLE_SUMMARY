@@ -41,22 +41,61 @@ except subprocess.CalledProcessError as e:
 try:
     with open('MC_Recon_UI.py', 'r', encoding='utf-8') as f:
         content = f.read()
-        # Try multiple regex patterns to find the version
-        version_match = re.search(r"VERSION\s*=\s*'([\d\.]+)'\s*", content)
-        if not version_match:
-            version_match = re.search(r"VERSION\s*=\s*'([\d\.]+)'", content)
+        print(f"File size: {len(content)} bytes")
         
-        if version_match:
-            current_version = version_match.group(1)
-            print(f"Current version: {current_version}")
-        else:
-            print("Error: Could not find version in MC_Recon_UI.py")
-            # Print a small portion of the file for debugging
-            print("File content sample:")
-            lines = content.split('\n')
-            for i in range(max(0, 580), min(585, len(lines))):
-                print(f"Line {i+1}: {lines[i]}")
-            sys.exit(1)
+        # Try multiple patterns to find version
+        patterns = [
+            r"VERSION\s*=\s*'([\d\.]+)'\s*",  # VERSION = '1.1.16'
+            r"VERSION\s*=\s*'([\d\.]+)'",      # VERSION = '1.1.16' (no trailing whitespace)
+            r"VERSION\s*=\s*\"([\d\.]+)\"\s*", # VERSION = "1.1.16"
+            r"VERSION\s*=\s*\"([\d\.]+)\"",    # VERSION = "1.1.16" (no trailing whitespace)
+            r"self\.version\s*=\s*'([\d\.]+)'\s*", # self.version = '1.1.16'
+            r"self\.version\s*=\s*\"([\d\.]+)\"\s*", # self.version = "1.1.16"
+            r"__version__\s*=\s*'([\d\.]+)'\s*", # __version__ = '1.1.16'
+            r"__version__\s*=\s*\"([\d\.]+)\"\s*" # __version__ = "1.1.16"
+        ]
+        
+        current_version = None
+        for i, pattern in enumerate(patterns):
+            version_match = re.search(pattern, content)
+            if version_match:
+                current_version = version_match.group(1)
+                print(f"Found version: {current_version} using pattern {i+1}")
+                break
+        
+        if not current_version:
+            # Try to find any version-like pattern
+            backup_pattern = r"['\"]([\d]+\.[\d]+\.[\d]+)['\"]"  # '1.1.16' or "1.1.16"
+            version_match = re.search(backup_pattern, content)
+            if version_match:
+                current_version = version_match.group(1)
+                print(f"Found version with backup pattern: {current_version}")
+            else:
+                # Print file content sample for debugging
+                print("Error: Could not find version in MC_Recon_UI.py")
+                print("File content sample:")
+                lines = content.split('\n')
+                
+                # Try to find lines with version-like strings
+                version_lines = []
+                for i, line in enumerate(lines):
+                    if re.search(r"['\"][\d]+\.[\d]+\.[\d]+['\"]|version|VERSION", line, re.IGNORECASE):
+                        version_lines.append((i, line))
+                
+                if version_lines:
+                    print("Found lines that might contain version information:")
+                    for i, line in version_lines[:10]:  # Show at most 10 lines
+                        print(f"Line {i+1}: {line}")
+                else:
+                    # Show a sample of lines if no version-like lines found
+                    for i in range(max(0, 580), min(585, len(lines))):
+                        print(f"Line {i+1}: {lines[i]}")
+                
+                sys.exit(1)
+                
+        # If we get here, we found a version
+        print(f"Using version: {current_version}")
+        
 except Exception as e:
     print(f"Error reading MC_Recon_UI.py: {e}")
     sys.exit(1)
@@ -98,7 +137,15 @@ if not os.path.exists(exe_path):
     # Try to find the actual file
     dist_files = os.listdir('dist')
     print(f"Files in dist directory: {dist_files}")
-    sys.exit(1)
+    
+    # Try to find any .exe file
+    exe_files = [f for f in dist_files if f.endswith('.exe')]
+    if exe_files:
+        print(f"Found executable files: {exe_files}")
+        exe_path = os.path.join('dist', exe_files[0])
+        print(f"Using: {exe_path}")
+    else:
+        sys.exit(1)
 
 zip_name = f"MC对账明细工具_v{current_version}.zip"
 zip_path = os.path.join('dist', zip_name)
@@ -107,7 +154,7 @@ try:
     with zipfile.ZipFile(zip_path, 'w') as zipf:
         # Add executable
         zipf.write(exe_path, os.path.basename(exe_path))
-        print(f"Added {exe_name} to ZIP")
+        print(f"Added {os.path.basename(exe_path)} to ZIP")
         
         # Add config.ini if it exists
         if os.path.exists('config.ini'):
