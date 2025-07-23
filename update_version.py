@@ -26,26 +26,62 @@ print("Reading version from MC_Recon_UI.py...")
 try:
     with open('MC_Recon_UI.py', 'r', encoding='utf-8') as f:
         content = f.read()
-        # Modified regex pattern to better match the actual format in the file
-        version_match = re.search(r"VERSION\s*=\s*'([\d\.]+)'\s*", content)
-        if version_match:
-            version = version_match.group(1)
-            print(f"Found version: {version}")
-        else:
-            # Try alternative pattern without whitespace requirement after the version
-            version_match = re.search(r"VERSION\s*=\s*'([\d\.]+)'", content)
+        print(f"File size: {len(content)} bytes")
+        
+        # Try multiple patterns to find version
+        patterns = [
+            r"VERSION\s*=\s*'([\d\.]+)'\s*",  # VERSION = '1.1.16'
+            r"VERSION\s*=\s*'([\d\.]+)'",      # VERSION = '1.1.16' (no trailing whitespace)
+            r"VERSION\s*=\s*\"([\d\.]+)\"\s*", # VERSION = "1.1.16"
+            r"VERSION\s*=\s*\"([\d\.]+)\"",    # VERSION = "1.1.16" (no trailing whitespace)
+            r"self\.version\s*=\s*'([\d\.]+)'\s*", # self.version = '1.1.16'
+            r"self\.version\s*=\s*\"([\d\.]+)\"\s*", # self.version = "1.1.16"
+            r"__version__\s*=\s*'([\d\.]+)'\s*", # __version__ = '1.1.16'
+            r"__version__\s*=\s*\"([\d\.]+)\"\s*" # __version__ = "1.1.16"
+        ]
+        
+        version = None
+        for i, pattern in enumerate(patterns):
+            version_match = re.search(pattern, content)
             if version_match:
                 version = version_match.group(1)
-                print(f"Found version with alternative pattern: {version}")
+                print(f"Found version: {version} using pattern {i+1}")
+                break
+        
+        if not version:
+            # Try to find any version-like pattern
+            backup_pattern = r"['\"]([\d]+\.[\d]+\.[\d]+)['\"]"  # '1.1.16' or "1.1.16"
+            version_match = re.search(backup_pattern, content)
+            if version_match:
+                version = version_match.group(1)
+                print(f"Found version with backup pattern: {version}")
             else:
+                # Print file content sample for debugging
                 print("Error: Could not find version in MC_Recon_UI.py")
-                # Print a small portion of the file for debugging
                 print("File content sample:")
                 lines = content.split('\n')
-                for i in range(max(0, 580), min(585, len(lines))):
-                    print(f"Line {i+1}: {lines[i]}")
+                
+                # Try to find lines with version-like strings
+                version_lines = []
+                for i, line in enumerate(lines):
+                    if re.search(r"['\"][\d]+\.[\d]+\.[\d]+['\"]|version|VERSION", line, re.IGNORECASE):
+                        version_lines.append((i, line))
+                
+                if version_lines:
+                    print("Found lines that might contain version information:")
+                    for i, line in version_lines[:10]:  # Show at most 10 lines
+                        print(f"Line {i+1}: {line}")
+                else:
+                    # Show a sample of lines if no version-like lines found
+                    for i in range(max(0, 580), min(585, len(lines))):
+                        print(f"Line {i+1}: {lines[i]}")
+                
                 sys.exit(1)
-except Exception as e:
+                
+        # If we get here, we found a version
+        print(f"Using version: {version}")
+        
+ except Exception as e:
     print(f"Error reading MC_Recon_UI.py: {e}")
     sys.exit(1)
 
@@ -65,10 +101,28 @@ print(f"Incrementing patch version: {version} -> {new_version}")
 # Update version in MC_Recon_UI.py
 print("Updating version in MC_Recon_UI.py...")
 try:
-    new_content = re.sub(r"VERSION\s*=\s*'[\d\.]+'\s*", f"VERSION = '{new_version}'\n", content)
-    with open('MC_Recon_UI.py', 'w', encoding='utf-8') as f:
-        f.write(new_content)
-    print(f"Updated version in MC_Recon_UI.py to {new_version}")
+    # Try to replace using the same pattern that matched
+    for pattern in patterns:
+        version_match = re.search(pattern, content)
+        if version_match:
+            # Use the same format for replacement
+            old_version_str = version_match.group(0)
+            new_version_str = old_version_str.replace(version, new_version)
+            new_content = content.replace(old_version_str, new_version_str)
+            
+            # Check if replacement was successful
+            if new_content != content:
+                with open('MC_Recon_UI.py', 'w', encoding='utf-8') as f:
+                    f.write(new_content)
+                print(f"Updated version in MC_Recon_UI.py to {new_version}")
+                break
+    else:
+        # If no pattern matched or replacement failed, try a more generic approach
+        new_content = re.sub(r"(['\"])[\d]+\.[\d]+\.[\d]+(['\"])", f"\1{new_version}\2", content, count=1)
+        with open('MC_Recon_UI.py', 'w', encoding='utf-8') as f:
+            f.write(new_content)
+        print(f"Updated version in MC_Recon_UI.py to {new_version} using generic replacement")
+        
 except Exception as e:
     print(f"Error updating MC_Recon_UI.py: {e}")
     sys.exit(1)
