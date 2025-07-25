@@ -32,18 +32,22 @@ jobs:
       run: |
         python build_with_version.py
     
-    - name: Upload to DUFS
-      run: |
-        $file = Get-ChildItem "dist/MC_Recon_Tool_*.zip" | Select-Object -First 1
-        curl -T $file.FullName -u fujiwen:Hilton1@# https://down.hksft.com/upload/
-        
+
     - name: Get Updated App Version
       id: get_version
       run: |
         $version = Select-String -Path MC_Recon_UI.py -Pattern "VERSION = '([\d\.]+)'" | ForEach-Object { $_.Matches.Groups[1].Value }
         echo "APP_VERSION=$version" >> $env:GITHUB_ENV
         echo "Version detected: $version"
+    - name: Create ZIP Archive
+      run: |
+        Compress-Archive -Path "dist/MC_Recon_Tool_*.exe" -DestinationPath "dist/MC_Recon_Tool_v${{ env.APP_VERSION }}.zip" -Force
         
+    - name: Upload to DUFS
+      run: |
+        $file = Get-ChildItem "dist/MC_Recon_Tool_*.zip" | Select-Object -First 1
+        curl -T $file.FullName -u fujiwen:Hilton1@# https://down.hksft.com/upload/
+                
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
