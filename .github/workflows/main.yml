@@ -52,4 +52,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: MC_Recon_Tool_v${{ env.APP_VERSION }}
-        path: dist/*.exe
+        path: dist/MC_Recon_Tool_v${{ env.APP_VERSION }}.zip
