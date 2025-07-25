@@ -206,6 +206,10 @@ class DataProcessThread(QThread):
                     ws.page_setup.fitToWidth = 1
                     ws.print_options.horizontalCentered = True
                     ws.print_options.verticalCentered = False
+                    # 设置页面缩放比例为80%
+                    ws.sheet_properties.pageSetUpPr = PageSetupProperties(fitToPage=True)
+                    ws.sheet_view.zoomScale = 80
+                    
                     # 读取配置文件中的公司名称
                     config = configparser.ConfigParser()
                     config_path = get_config_path()
@@ -229,16 +233,16 @@ class DataProcessThread(QThread):
                     
                     # 设置列宽
                     column_widths = {
-                        '收货单号': 19,
+                        '收货单号': 17,
                         '收货日期': 19,
-                        '商品名称': 45,
-                        '实收数量': 10,
-                        '基本单位': 13,
-                        '单价': 14,
+                        '商品名称': 60,
+                        '实收数量': 19,
+                        '基本单位': 19,
+                        '单价': 20,
                         '小计金额': 14,
                         '税额': 14,
                         '税率': 10,
-                        '小计价税': 14,
+                        '小计价税': 20,
                         '部门': 35,
                         '供应商名称': 36
                     }
@@ -247,22 +251,85 @@ class DataProcessThread(QThread):
                     hotel_title_row = 1
                     ws.merge_cells(start_row=hotel_title_row, start_column=1, end_row=hotel_title_row, end_column=len(column_widths))
                     hotel_title_cell = ws.cell(row=hotel_title_row, column=1, value='对账明细表')
-                    hotel_title_cell.font = Font(name='微软雅黑', size=16, bold=True, color='FFFFFF')
-                    hotel_title_cell.fill = PatternFill(start_color='1F497D', end_color='1F497D', fill_type='solid')
+                    hotel_title_cell.font = Font(name='微软雅黑', size=16, color='000000')
                     hotel_title_cell.alignment = Alignment(horizontal='center', vertical='center')
                     ws.row_dimensions[hotel_title_row].height = 60
                     
-                    # 设置对账明细表标题
-                    title_row = 2
-                    ws.merge_cells(start_row=title_row, start_column=1, end_row=title_row, end_column=len(column_widths))
-                    title_cell = ws.cell(row=title_row, column=1, value='')
-                    title_cell.font = Font(name='微软雅黑', size=20, bold=True, color='FFFFFF')
-                    title_cell.fill = PatternFill(start_color='1F497D', end_color='1F497D', fill_type='solid')
-                    title_cell.alignment = Alignment(horizontal='center', vertical='center')
-                    ws.row_dimensions[title_row].height = 10
+                    # 设置空白行2
+                    blank_row2 = 2
+                    ws.merge_cells(start_row=blank_row2, start_column=1, end_row=blank_row2, end_column=len(column_widths))
+                    # 在A2单元格添加供应商名称信息
+                    supplier_info = f'供应商名称：{supplier_name}'
+                    blank_cell2 = ws.cell(row=blank_row2, column=1, value=supplier_info)
+                    blank_cell2.font = Font(name='微软雅黑', size=13, color='000000')
+                    blank_cell2.alignment = Alignment(horizontal='left', vertical='center')
+                    ws.row_dimensions[blank_row2].height = 30
+
+                    # 设置空白行3 - 添加对账周期信息
+                    blank_row3 = 3
+                    ws.merge_cells(start_row=blank_row3, start_column=1, end_row=blank_row3, end_column=len(column_widths))
+                    
+                    # 获取年月信息并计算月份第一天和最后一天
+                    first_date = pd.to_datetime(supplier_data['收货日期'].iloc[0])
+                    first_day = first_date.replace(day=1).strftime('%Y-%m-%d')
+                    # 计算月份最后一天
+                    if first_date.month == 12:
+                        last_day_date = first_date.replace(year=first_date.year+1, month=1, day=1) - pd.Timedelta(days=1)
+                    else:
+                        last_day_date = first_date.replace(month=first_date.month+1, day=1) - pd.Timedelta(days=1)
+                    last_day = last_day_date.strftime('%Y-%m-%d')
+                    
+                    # 设置对账周期信息
+                    billing_cycle = f'对帐周期：{first_day} 至 {last_day}'
+                    blank_cell3 = ws.cell(row=blank_row3, column=1, value=billing_cycle)
+                    blank_cell3.font = Font(name='微软雅黑', size=13, color='000000')
+                    blank_cell3.alignment = Alignment(horizontal='left', vertical='center')
+                    ws.row_dimensions[blank_row3].height = 30
+
+                    # 设置空白行4 - 添加小计金额合计信息
+                    blank_row4 = 4
+                    ws.merge_cells(start_row=blank_row4, start_column=1, end_row=blank_row4, end_column=len(column_widths))
+                    
+                    # 获取小计金额合计数据
+                    total_subtotal = supplier_data['小计金额'].sum()
+                    
+                    # 设置小计金额信息
+                    subtotal_info = f'Net净额：{total_subtotal:,.2f}'
+                    blank_cell4 = ws.cell(row=blank_row4, column=1, value=subtotal_info)
+                    blank_cell4.font = Font(name='微软雅黑', size=13, color='000000')
+                    blank_cell4.alignment = Alignment(horizontal='left', vertical='center')
+                    ws.row_dimensions[blank_row4].height = 30
+
+                    # 设置空白行5 - 添加税额合计信息
+                    blank_row5 = 5
+                    ws.merge_cells(start_row=blank_row5, start_column=1, end_row=blank_row5, end_column=len(column_widths))
+                    
+                    # 获取税额合计数据
+                    total_tax = supplier_data['税额'].sum()
+                    
+                    # 设置税额信息
+                    tax_info = f'Vat税额：{total_tax:,.2f}'
+                    blank_cell5 = ws.cell(row=blank_row5, column=1, value=tax_info)
+                    blank_cell5.font = Font(name='微软雅黑', size=13, color='000000')
+                    blank_cell5.alignment = Alignment(horizontal='left', vertical='center')
+                    ws.row_dimensions[blank_row5].height = 30
+
+                    # 设置空白行6 - 添加小计价税合计信息
+                    blank_row6 = 6
+                    ws.merge_cells(start_row=blank_row6, start_column=1, end_row=blank_row6, end_column=len(column_widths))
+                    
+                    # 获取小计价税合计数据
+                    total_amount = supplier_data['小计价税'].sum()
+                    
+                    # 设置小计价税信息
+                    gross_info = f'Gross含税总额：{total_amount:,.2f}'
+                    blank_cell6 = ws.cell(row=blank_row6, column=1, value=gross_info)
+                    blank_cell6.font = Font(name='微软雅黑', size=13, color='000000')
+                    blank_cell6.alignment = Alignment(horizontal='left', vertical='center')
+                    ws.row_dimensions[blank_row6].height = 30
                     
                     # 设置表头样式
-                    header_font = Font(name='微软雅黑', size=13, bold=True, color='FFFFFF')
+                    header_font = Font(name='微软雅黑', size=13, bold=False, color='000000')
                     cell_font = Font(name='微软雅黑', size=13)
                     
                     # 设置对齐方式
@@ -277,23 +344,42 @@ class DataProcessThread(QThread):
                         top=Side(style='hair', color='D3D3D3'),
                         bottom=Side(style='hair', color='D3D3D3')
                     )
-                    thick_border = Border(
-                        left=Side(style='thin', color='1F497D'),
-                        right=Side(style='thin', color='1F497D'),
-                        top=Side(style='thin', color='1F497D'),
-                        bottom=Side(style='thin', color='1F497D')
+                    header_border = Border(
+                        top=Side(style='thin', color='000000'),
+                        bottom=Side(style='thin', color='000000')
                     )
 
                     # 写入表头
                     headers = list(supplier_data.columns)
-                    header_row = 3
+                    
+                    # 更新表头字段名称
+                    header_mapping = {
+                        '商品名称': '商品名称 Article',
+                        '实收数量': '实收数量 QTY',
+                        '基本单位': '基本单位 Unit',
+                        '单价': '单价 Unit Price',
+                        '小计金额': '净额 Net',
+                        '税额': '税额 VAT',
+                        '小计价税': '含税总额 Gross',
+                        '部门': '成本中心 CostCenter'
+                    }
+                    
+                    header_row = 7
                     for col, header in enumerate(headers, 1):
-                        cell = ws.cell(row=header_row, column=col, value=header)
+                        # 使用映射更新表头名称
+                        display_header = header_mapping.get(header, header)
+                        cell = ws.cell(row=header_row, column=col, value=display_header)
                         cell.font = header_font
                         cell.alignment = center_alignment
-                        cell.fill = PatternFill(start_color='1F497D', end_color='1F497D', fill_type='solid')
-                        cell.border = thick_border
+                        cell.border = header_border
                         ws.column_dimensions[get_column_letter(col)].width = column_widths[header]
+                        
+                        # 隐藏供应商名称列
+                        if header == '供应商名称':
+                            ws.column_dimensions[get_column_letter(col)].hidden = True
+                    
+                    # 冻结前七行
+                    ws.freeze_panes = 'A8'
 
                     # 写入数据
                     for row_idx, row in enumerate(supplier_data.values, header_row + 1):
@@ -303,6 +389,7 @@ class DataProcessThread(QThread):
                         # 检查是否为负数金额行
                         has_negative = False
                         for col_idx, value in enumerate(row, 1):
+                            # 使用原始字段名称进行判断，因为headers中存储的是原始字段名
                             if headers[col_idx-1] in ['小计金额', '税额', '小计价税'] and pd.notna(value) and float(value) < 0:
                                 has_negative = True
                                 break
@@ -322,12 +409,14 @@ class DataProcessThread(QThread):
                             # 如果是负数金额行，整行设置黄色背景
                             if has_negative:
                                 cell.fill = PatternFill(start_color='FFFF00', end_color='FFFF00', fill_type='solid')
+                                # 使用原始字段名称进行判断，因为headers中存储的是原始字段名
                                 if headers[col_idx-1] in ['小计金额', '税额', '小计价税'] and pd.notna(value) and float(value) < 0:
                                     cell.font = Font(name='微软雅黑', size=11, color='FF0000')
                             elif row_fill:
                                 cell.fill = row_fill
                             
                             # 设置数字列的对齐方式和格式
+                            # 使用原始字段名称进行判断，因为headers中存储的是原始字段名
                             if headers[col_idx-1] in ['商品名称', '部门']:
                                 cell.alignment = wrap_alignment
                             elif headers[col_idx-1] in ['实收数量', '单价', '小计金额', '税额', '小计价税']:
@@ -345,9 +434,8 @@ class DataProcessThread(QThread):
                     row_idx = len(supplier_data) + header_row + 1
                     for col_idx, value in enumerate(summary_row.iloc[0], 1):
                         cell = ws.cell(row=row_idx, column=col_idx, value=value)
-                        cell.font = Font(name='微软雅黑', size=11, bold=True, color='FFFFFF')
-                        cell.fill = PatternFill(start_color='1F497D', end_color='1F497D', fill_type='solid')
-                        cell.border = thick_border
+                        cell.font = Font(name='微软雅黑', size=11, bold=True)
+                        cell.border = thin_border
                         
                         # 设置数字列的对齐方式和格式
                         if headers[col_idx-1] in ['小计金额', '税额', '小计价税']:
@@ -358,10 +446,8 @@ class DataProcessThread(QThread):
                             cell.alignment = center_alignment
                     
                     # 设置重复打印的行
+                    ws.print_title_rows = '1:7'
 
-                    # 设置重复打印的行
-                    ws.print_title_rows = '1:3'
-                    
                     # 创建商品数量统计工作表
                     article_summary_ws = wb.create_sheet(title="Article_Summary")
                     
@@ -398,22 +484,21 @@ class DataProcessThread(QThread):
                     
                     # 设置商品统计表的列宽
                     summary_column_widths = {
-                        '商品名称': 45,
+                        '商品名称 Article': 45,
                         '总数量': 12,
-                        '基本单位': 13,
+                        '基本单位 Unit': 13,
                         '平均单价': 14,
-                        '小计金额': 14,
-                        '税额': 14,
+                        '净额 Net': 14,
+                        '税额 VAT': 14,
                         '税率': 10,
-                        '小计价税': 14
+                        '含税总额 Gross': 14
                     }
                     
                     # 设置商品统计表标题
                     summary_title_row = 1
                     article_summary_ws.merge_cells(start_row=summary_title_row, start_column=1, end_row=summary_title_row, end_column=len(summary_column_widths))
-                    summary_title_cell = article_summary_ws.cell(row=summary_title_row, column=1, value='商品数量统计表')
-                    summary_title_cell.font = Font(name='微软雅黑', size=16, bold=True, color='FFFFFF')
-                    summary_title_cell.fill = PatternFill(start_color='1F497D', end_color='1F497D', fill_type='solid')
+                    summary_title_cell = article_summary_ws.cell(row=summary_title_row, column=1, value='商品数量统计表 Article Summary')
+                    summary_title_cell.font = Font(name='微软雅黑', size=16, color='000000')
                     summary_title_cell.alignment = Alignment(horizontal='center', vertical='center')
                     article_summary_ws.row_dimensions[summary_title_row].height = 60
                     
@@ -421,21 +506,22 @@ class DataProcessThread(QThread):
                     summary_blank_row = 2
                     article_summary_ws.merge_cells(start_row=summary_blank_row, start_column=1, end_row=summary_blank_row, end_column=len(summary_column_widths))
                     blank_cell = article_summary_ws.cell(row=summary_blank_row, column=1, value='')
-                    blank_cell.font = Font(name='微软雅黑', size=20, bold=True, color='FFFFFF')
-                    blank_cell.fill = PatternFill(start_color='1F497D', end_color='1F497D', fill_type='solid')
+                    blank_cell.font = Font(name='微软雅黑', size=20, color='000000')
                     blank_cell.alignment = Alignment(horizontal='center', vertical='center')
                     article_summary_ws.row_dimensions[summary_blank_row].height = 10
                     
                     # 写入商品统计表头
-                    summary_headers = ['商品名称', '总数量', '基本单位', '平均单价', '小计金额', '税额', '税率', '小计价税']
+                    summary_headers = ['商品名称 Article', '总数量', '基本单位 Unit', '平均单价', '净额 Net', '税额 VAT', '税率', '含税总额 Gross']
                     summary_header_row = 3
                     for col, header in enumerate(summary_headers, 1):
                         cell = article_summary_ws.cell(row=summary_header_row, column=col, value=header)
                         cell.font = header_font
                         cell.alignment = center_alignment
-                        cell.fill = PatternFill(start_color='1F497D', end_color='1F497D', fill_type='solid')
-                        cell.border = thick_border
+                        cell.border = header_border
                         article_summary_ws.column_dimensions[get_column_letter(col)].width = summary_column_widths[header]
+                    
+                    # 冻结前三行
+                    article_summary_ws.freeze_panes = 'A4'
                     
                     # 写入商品统计数据
                     for row_idx, (_, row) in enumerate(article_stats.iterrows(), summary_header_row + 1):
@@ -469,9 +555,10 @@ class DataProcessThread(QThread):
                                 cell.fill = row_fill
                             
                             # 设置对齐方式和格式
-                            if summary_headers[col_idx-1] == '商品名称':
+                            # 由于summary_headers已更新，需要使用新的字段名称进行判断
+                            if summary_headers[col_idx-1] == '商品名称 Article':
                                 cell.alignment = wrap_alignment
-                            elif summary_headers[col_idx-1] in ['总数量', '平均单价', '小计金额', '税额', '小计价税']:
+                            elif summary_headers[col_idx-1] in ['总数量', '平均单价', '净额 Net', '税额 VAT', '含税总额 Gross']:
                                 cell.alignment = right_alignment
                                 if pd.notna(value) and str(value).strip():
                                     cell.number_format = '#,##0.00'
@@ -497,11 +584,11 @@ class DataProcessThread(QThread):
                     
                     for col_idx, value in enumerate(summary_totals, 1):
                         cell = article_summary_ws.cell(row=summary_total_row, column=col_idx, value=value)
-                        cell.font = Font(name='微软雅黑', size=11, bold=True, color='FFFFFF')
-                        cell.fill = PatternFill(start_color='1F497D', end_color='1F497D', fill_type='solid')
-                        cell.border = thick_border
+                        cell.font = Font(name='微软雅黑', size=11, bold=True)
+                        cell.border = thin_border
                         
-                        if summary_headers[col_idx-1] in ['总数量', '小计金额', '税额', '小计价税']:
+                        # 设置数字列的对齐方式和格式
+                        if summary_headers[col_idx-1] in ['总数量', '平均单价', '小计金额', '税额', '小计价税']:
                             cell.alignment = right_alignment
                             if pd.notna(value) and str(value).strip():
                                 cell.number_format = '#,##0.00'
