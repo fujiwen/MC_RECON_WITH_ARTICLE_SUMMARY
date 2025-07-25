@@ -762,7 +762,7 @@ class QTextEditLogger(logging.Handler):
             )
 
 # 程序版本信息
-VERSION = '1.1.17'
+VERSION = '1.1.18'
 
 class MainWindow(QMainWindow):
     def __init__(self):
