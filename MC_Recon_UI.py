@@ -762,7 +762,7 @@ class QTextEditLogger(logging.Handler):
             )
 
 # 程序版本信息
-VERSION = '1.1.19'
+VERSION = '1.2.0'
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -1273,7 +1273,7 @@ def check_expiration():
     # 获取当前日期
     current_date = datetime.now()
     # 设置过期日期为2025年12月31日
-    expiration_date = datetime(2025, 12, 31)
+    expiration_date = datetime(2026, 12, 31)
     
     # 如果当前日期超过了2025年12月31日，则程序已过期
     if current_date > expiration_date:
